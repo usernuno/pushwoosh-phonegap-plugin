@@ -54,9 +54,9 @@
 			 where PACKAGE is the application's package name.
 			 -->
 			<permission
-				android:name="$PACKAGE_NAME.permission.C2D_MESSAGE"
+				android:name="${applicationId}.permission.C2D_MESSAGE"
 				android:protectionLevel="signature"/>
-			<uses-permission android:name="$PACKAGE_NAME.permission.C2D_MESSAGE"/>
+			<uses-permission android:name="${applicationId}.permission.C2D_MESSAGE"/>
 
 			<!-- This app has permission to register and receive data message. -->
 			<uses-permission android:name="com.google.android.c2dm.permission.RECEIVE"/>
@@ -89,7 +89,7 @@
 			<receiver android:name="com.google.android.gms.gcm.GcmReceiver" android:exported="true" android:permission="com.google.android.c2dm.permission.SEND">
 				<intent-filter>
 					<action android:name="com.google.android.c2dm.intent.RECEIVE" />
-					<category android:name="$PACKAGE_NAME" />
+					<category android:name="${applicationId}" />
 				</intent-filter>
 			</receiver>
 
