@@ -90,10 +90,8 @@ public class PushNotifications extends CordovaPlugin {
 
 		//If there is no startP
 		if (startPushData != null) {
-			Log.e("Push Message", "JSON --> " + startPushData.toString());
 			doOnPushOpened(startPushData.toString());
 		} else {
-			Log.e("Push Message", "JSON --> NULL");
 			if (launcherIntent.getData() != null) {
 				String deepLink = launcherIntent.getData().toString();
 				String notification = buidNotificationJsonToDeepLinks(deepLink);
@@ -247,10 +245,8 @@ public class PushNotifications extends CordovaPlugin {
 			startPushData = getPushFromIntent(launcherIntent);
 
 			if (startPushData != null) {
-				Log.e("Push Message", "JSON --> " + startPushData.toString());
 				doOnPushOpened(startPushData.toString());
 			} else {
-				Log.e("P DeviceReady", "JSON --> NULL");
 				if (launcherIntent.getData() != null) {
 					Log.e("P DeviceReady", "JSON --> DATA");
 					String deepLink = launcherIntent.getData().toString();
