@@ -102,6 +102,9 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
 	}
 
 	_deviceReady = YES;
+	
+	CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 
 	[[NSUserDefaults standardUserDefaults] synchronize];
 }
