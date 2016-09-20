@@ -272,7 +272,7 @@ public class PushNotifications extends CordovaPlugin {
 			PWLog.error(TAG, "Missing pw_appid parameter. Did you follow the guide correctly?", e);
 			return false;
 		}
-
+		callbackContext.success();
 		checkMessage(cordova.getActivity().getIntent());
 		return true;
 	}
@@ -284,7 +284,6 @@ public class PushNotifications extends CordovaPlugin {
 			mPushManager.registerForPushNotifications();
 		} catch (java.lang.RuntimeException e) {
 			callbackIds.remove("registerDevice");
-			;
 			PWLog.error(TAG, "registering for push notifications failed", e);
 
 			callbackContext.error(e.getMessage());

@@ -43,8 +43,8 @@ function PushNotification() {}
 //		serviceName: "XXXX" 
 //	});
 //(end)
-PushNotification.prototype.onDeviceReady = function(config) {
-	exec(null, null, "PushNotification", "onDeviceReady", config ? [config] : []);
+PushNotification.prototype.onDeviceReady = function(success, fail, config) {
+	exec(success, fail, "PushNotification", "onDeviceReady", config ? [config] : []);
 };
 
 //Function: registerDevice
