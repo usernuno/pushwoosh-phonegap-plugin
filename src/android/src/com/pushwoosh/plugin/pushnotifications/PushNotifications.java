@@ -17,7 +17,6 @@ import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.util.Log;
 
 import com.pushwoosh.BasePushMessageReceiver;
 import com.pushwoosh.BaseRegistrationReceiver;
@@ -84,22 +83,13 @@ public class PushNotifications extends CordovaPlugin {
 	public void onNewIntent(Intent intent) {
 		super.onNewIntent(intent);
 
-		//TODO
-		Intent launcherIntent = (Intent)intent.getExtras().get("LAUNCHER_INTENT");
-		startPushData = getPushFromIntent(launcherIntent);
+		startPushData = getPushFromIntent(intent);
 
-		//If there is no startP
 		if (startPushData != null) {
 			doOnPushOpened(startPushData.toString());
-		} else {
-			if (launcherIntent.getData() != null) {
-				String deepLink = launcherIntent.getData().toString();
-				String notification = buidNotificationJsonToDeepLinks(deepLink);
-				doOnPushOpened(notification);
-			}
 		}
 
-		checkMessage(launcherIntent);
+		checkMessage(intent);
 	}
 
 	private BroadcastReceiver mRegistrationReceiver = new BaseRegistrationReceiver() {
@@ -239,20 +229,11 @@ public class PushNotifications extends CordovaPlugin {
 		try {
 			//make sure the receivers are on
 			registerReceivers();
-			
-			//boolean result = cordova.getActivity().getIntent().hasExtra("LAUNCHER_INTENT");
-			Intent launcherIntent = (Intent)cordova.getActivity().getIntent().getExtras().get("LAUNCHER_INTENT");
-			startPushData = getPushFromIntent(launcherIntent);
+
+			startPushData = getPushFromIntent(cordova.getActivity().getIntent());
 
 			if (startPushData != null) {
 				doOnPushOpened(startPushData.toString());
-			} else {
-				if (launcherIntent.getData() != null) {
-					Log.e("P DeviceReady", "JSON --> DATA");
-					String deepLink = launcherIntent.getData().toString();
-					String notification = buidNotificationJsonToDeepLinks(deepLink);
-					doOnPushOpened(notification);
-				}
 			}
 
 			String appid = null;
