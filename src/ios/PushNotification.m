@@ -31,7 +31,19 @@
 
 @end
 
-void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, const char * signature);
+void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, const char * signature) {
+	Method method = nil;
+	method = class_getInstanceMethod(class, fromChange);
+	
+	if (method) {
+		//method exists add a new method and swap with original
+		class_addMethod(class, toChange, impl, signature);
+		method_exchangeImplementations(class_getInstanceMethod(class, fromChange), class_getInstanceMethod(class, toChange));
+	} else {
+		//just add as orignal method
+		class_addMethod(class, fromChange, impl, signature);
+	}
+}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wincomplete-implementation"
@@ -146,16 +158,12 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
 }
 
 - (void)startBeaconPushes:(CDVInvokedUrlCommand *)command {
-	[[PushNotificationManager pushManager] startBeaconTracking];
-
-	CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:nil];
+	CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:@{ @"error" : @"Beacon tracking is not supported" }];
 	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
 - (void)stopBeaconPushes:(CDVInvokedUrlCommand *)command {
-	[[PushNotificationManager pushManager] stopBeaconTracking];
-
-	CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:nil];
+	CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:@{ @"error" : @"Beacon tracking is not supported" }];
 	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
@@ -213,20 +221,21 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
 }
 
 - (void)onDidRegisterForRemoteNotificationsWithDeviceToken:(NSString *)token {
-	NSMutableDictionary *results = [PushNotificationManager getRemoteNotificationStatus];
-	results[@"pushToken"] = token;
-
-	CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:results];
-	[self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackIds[@"registerDevice"]];
+	if (self.callbackIds[@"registerDevice"]) {
+		NSMutableDictionary *results = [PushNotificationManager getRemoteNotificationStatus];
+		results[@"pushToken"] = token;
+		CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:results];
+		[self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackIds[@"registerDevice"]];
+	}
 }
 
 - (void)onDidFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
-	NSMutableDictionary *results = [NSMutableDictionary dictionary];
-	results[@"error"] = [NSString stringWithFormat:@"%@", error];
-
-	CDVPluginResult *pluginResult =
-		[CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:results];
-	[self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackIds[@"registerDevice"]];
+	if (self.callbackIds[@"registerDevice"]) {
+		NSMutableDictionary *results = [NSMutableDictionary dictionary];
+		results[@"error"] = [NSString stringWithFormat:@"%@", error];
+		CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:results];
+		[self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackIds[@"registerDevice"]];
+	}
 }
 
 - (void)onPushAccepted:(PushNotificationManager *)manager
