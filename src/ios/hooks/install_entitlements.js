@@ -53,8 +53,8 @@ function _handleEntitlementFile(sourceFile, destFile, configXML){
   var entitlementsFile = fs.readFileSync(sourceFile, 'utf8');
   var obj = plist.parse(entitlementsFile);
 
-  _getPreference(configXML, "aps-environment", "distribution").then(function(value){
-    obj['aps-environment'] = _validatePreference(value, "distribution");
+  _getPreference(configXML, "aps-environment", "production").then(function(value){
+    obj['aps-environment'] = _validatePreference(value, "production");
 
     var xml = plist.build(obj);
     fs.writeFileSync(destFile, xml, { encoding: 'utf8' });
