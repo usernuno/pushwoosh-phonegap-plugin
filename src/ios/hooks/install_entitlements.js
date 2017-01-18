@@ -126,7 +126,8 @@ module.exports = function (context) {
   var iosFolder = context.opts.cordova.project ? context.opts.cordova.project.root : path.join(context.opts.projectRoot, 'platforms/ios/');
   console.log("iOS Platform Folder: " + iosFolder);
 
-  var promise = undefined;
+  var promises = [];
+
   var projFolder = undefined;
   var projName = undefined;
   
@@ -144,13 +145,25 @@ module.exports = function (context) {
     throw new Error("Could not find an .xcodeproj folder in: " + iosFolder);
   }
 
-  var entitlementsFile = path.join(iosFolder, projName, projName + '.entitlements');
   var configXML = path.join(iosFolder, projName, 'config.xml');
   
-  if (fs.existsSync(entitlementsFile))
-    promise = _handleEntitlementFile(entitlementsFile, entitlementsFile, configXML);
-  else
-    promise = _createEntitlementFile(iosFolder, projFolder, projName, configXML, context);
+  //OutSystems NativeShell Entitlements File
+  var entitlementsFile = path.join(iosFolder, projName, projName + '.entitlements');
   
-  return promise;
+  //Cordova 6.4.0 Entitlements Files
+  var entitlementsDebugFile = path.join(iosFolder, projName, 'Entitlements-Debug.plist');
+  var entitlementsReleaseFile = path.join(iosFolder, projName, 'Entitlements-Release.plist');
+
+  if (fs.existsSync(entitlementsFile)) {
+    promises.push(_handleEntitlementFile(entitlementsFile, entitlementsFile, configXML));
+  }
+  else if (fs.existsSync(entitlementsDebugFile) && fs.existsSync(entitlementsReleaseFile)) {
+    promises.push(_handleEntitlementFile(entitlementsDebugFile, entitlementsDebugFile, configXML));
+    promises.push(_handleEntitlementFile(entitlementsReleaseFile, entitlementsReleaseFile, configXML));
+  }
+  else {
+    promises.push(_createEntitlementFile(iosFolder, projFolder, projName, configXML, context));
+  }
+
+  return Q.all(promises);
 }
