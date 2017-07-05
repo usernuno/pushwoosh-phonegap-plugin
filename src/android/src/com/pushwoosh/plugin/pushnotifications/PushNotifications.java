@@ -10,32 +10,6 @@
 
 package com.pushwoosh.plugin.pushnotifications;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
-import android.os.Bundle;
-
-import com.pushwoosh.BasePushMessageReceiver;
-import com.pushwoosh.BaseRegistrationReceiver;
-import com.pushwoosh.PushManager;
-import com.pushwoosh.PushManager.GetTagsListener;
-import com.pushwoosh.SendPushTagsCallBack;
-import com.pushwoosh.inapp.InAppFacade;
-import com.pushwoosh.internal.utils.GeneralUtils;
-import com.pushwoosh.internal.utils.JsonUtils;
-import com.pushwoosh.internal.utils.PWLog;
-import com.pushwoosh.notification.SoundType;
-import com.pushwoosh.notification.VibrateType;
-
-import org.apache.cordova.CallbackContext;
-import org.apache.cordova.CordovaPlugin;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.lang.annotation.Retention;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -45,9 +19,36 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Bundle;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+
+import com.pushwoosh.PushManager;
+import com.pushwoosh.internal.utils.PWLog;
+import com.pushwoosh.notification.SoundType;
+import com.pushwoosh.notification.VibrateType;
+import com.pushwoosh.PushManager.GetTagsListener;
+import com.pushwoosh.BasePushMessageReceiver;
+import com.pushwoosh.BaseRegistrationReceiver;
+import com.pushwoosh.SendPushTagsCallBack;
+import com.pushwoosh.internal.utils.GeneralUtils;
+import com.pushwoosh.internal.utils.JsonUtils;
+import com.pushwoosh.inapp.InAppFacade;
+
+import org.apache.cordova.CallbackContext;
+import org.apache.cordova.CordovaPlugin;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-public class PushNotifications extends CordovaPlugin {
+public class PushNotifications extends CordovaPlugin
+{
 	private static final String TAG = "CordovaPlugin";
 
 	boolean receiversRegistered = false;
@@ -64,7 +65,8 @@ public class PushNotifications extends CordovaPlugin {
 
 	}
 
-	static {
+	static
+	{
 		HashMap<String, Method> methods = new HashMap<String, Method>();
 
 		final List<Method> allMethods = new ArrayList<Method>(Arrays.asList(PushNotifications.class.getDeclaredMethods()));
@@ -80,7 +82,8 @@ public class PushNotifications extends CordovaPlugin {
 	/**
 	 * Called when the activity receives a new intent.
 	 */
-	public void onNewIntent(Intent intent) {
+	public void onNewIntent(Intent intent)
+	{
 		super.onNewIntent(intent);
 
 		startPushData = getPushFromIntent(intent);
@@ -92,22 +95,27 @@ public class PushNotifications extends CordovaPlugin {
 		checkMessage(intent);
 	}
 
-	private BroadcastReceiver mRegistrationReceiver = new BaseRegistrationReceiver() {
+	private BroadcastReceiver mRegistrationReceiver = new BaseRegistrationReceiver()
+	{
 		@Override
-		public void onRegisterActionReceive(Context context, Intent intent) {
+		public void onRegisterActionReceive(Context context, Intent intent)
+		{
 			checkMessage(intent);
 		}
 	};
 
-	private BroadcastReceiver mPushReceiver = new BasePushMessageReceiver() {
+	private BroadcastReceiver mPushReceiver = new BasePushMessageReceiver()
+	{
 		@Override
-		protected void onMessageReceive(Intent intent) {
+		protected void onMessageReceive(Intent intent)
+		{
 			doOnPushOpened(intent.getStringExtra(JSON_DATA_KEY));
 		}
 	};
 
 	//Registration of the receivers
-	public void registerReceivers() {
+	public void registerReceivers()
+	{
 		if (receiversRegistered)
 			return;
 
@@ -123,19 +131,26 @@ public class PushNotifications extends CordovaPlugin {
 		receiversRegistered = true;
 	}
 
-	public void unregisterReceivers() {
+	public void unregisterReceivers()
+	{
 		if (!receiversRegistered)
 			return;
 
-		try {
+		try
+		{
 			cordova.getActivity().unregisterReceiver(mPushReceiver);
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			// pass. for some reason Phonegap call this method before onResume. Not Android lifecycle style...
 		}
 
-		try {
+		try
+		{
 			cordova.getActivity().unregisterReceiver(mRegistrationReceiver);
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			//pass through
 		}
 
@@ -143,13 +158,15 @@ public class PushNotifications extends CordovaPlugin {
 	}
 
 	@Override
-	public void onResume(boolean multitasking) {
+	public void onResume(boolean multitasking)
+	{
 		super.onResume(multitasking);
 		registerReceivers();
 	}
 
 	@Override
-	public void onPause(boolean multitasking) {
+	public void onPause(boolean multitasking)
+	{
 		super.onPause(multitasking);
 		unregisterReceivers();
 	}
@@ -157,20 +174,26 @@ public class PushNotifications extends CordovaPlugin {
 	/**
 	 * The final call you receive before your activity is destroyed.
 	 */
-	public void onDestroy() {
+	public void onDestroy()
+	{
 		super.onDestroy();
 	}
 
-	private JSONObject getPushFromIntent(Intent intent) {
+	private JSONObject getPushFromIntent(Intent intent)
+	{
 		if (null == intent)
 			return null;
 
-		if (intent.hasExtra(PushManager.PUSH_RECEIVE_EVENT)) {
+		if (intent.hasExtra(PushManager.PUSH_RECEIVE_EVENT))
+		{
 			String pushString = intent.getExtras().getString(PushManager.PUSH_RECEIVE_EVENT);
 			JSONObject pushObject = null;
-			try {
+			try
+			{
 				pushObject = new JSONObject(pushString);
-			} catch (JSONException e) {
+			}
+			catch (JSONException e)
+			{
 				PWLog.error(TAG, "Failed to parse push notification", e);
 			}
 
@@ -180,17 +203,28 @@ public class PushNotifications extends CordovaPlugin {
 		return null;
 	}
 
-	private void checkMessage(Intent intent) {
-		if (null != intent) {
-			if (intent.hasExtra(PushManager.PUSH_RECEIVE_EVENT)) {
+	private void checkMessage(Intent intent)
+	{
+		if (null != intent)
+		{
+			if (intent.hasExtra(PushManager.PUSH_RECEIVE_EVENT))
+			{
 				doOnPushOpened(intent.getExtras().getString(PushManager.PUSH_RECEIVE_EVENT));
-			} else if (intent.hasExtra(PushManager.REGISTER_EVENT)) {
+			}
+			else if (intent.hasExtra(PushManager.REGISTER_EVENT))
+			{
 				doOnRegistered(intent.getExtras().getString(PushManager.REGISTER_EVENT));
-			} else if (intent.hasExtra(PushManager.UNREGISTER_EVENT)) {
+			}
+			else if (intent.hasExtra(PushManager.UNREGISTER_EVENT))
+			{
 				doOnUnregistered(intent.getExtras().getString(PushManager.UNREGISTER_EVENT));
-			} else if (intent.hasExtra(PushManager.REGISTER_ERROR_EVENT)) {
+			}
+			else if (intent.hasExtra(PushManager.REGISTER_ERROR_EVENT))
+			{
 				doOnRegisteredError(intent.getExtras().getString(PushManager.REGISTER_ERROR_EVENT));
-			} else if (intent.hasExtra(PushManager.UNREGISTER_ERROR_EVENT)) {
+			}
+			else if (intent.hasExtra(PushManager.UNREGISTER_ERROR_EVENT))
+			{
 				doOnUnregisteredError(intent.getExtras().getString(PushManager.UNREGISTER_ERROR_EVENT));
 			}
 
@@ -205,16 +239,21 @@ public class PushNotifications extends CordovaPlugin {
 	}
 
 	@CordovaMethod
-	private boolean onDeviceReady(JSONArray data, CallbackContext callbackContext) {
+	private boolean onDeviceReady(JSONArray data, CallbackContext callbackContext)
+	{
 		JSONObject params = null;
-		try {
+		try
+		{
 			params = data.getJSONObject(0);
-		} catch (JSONException e) {
+		}
+		catch (JSONException e)
+		{
 			PWLog.error(TAG, "No parameters has been passed to onDeviceReady function. Did you follow the guide correctly?", e);
 			return false;
 		}
 
-		try {
+		try
+		{
 			String packageName = cordova.getActivity().getApplicationContext().getPackageName();
 			ApplicationInfo ai = cordova.getActivity().getPackageManager().getApplicationInfo(packageName, PackageManager.GET_META_DATA);
 
@@ -222,11 +261,14 @@ public class PushNotifications extends CordovaPlugin {
 				broadcastPush = !(ai.metaData.getBoolean("PW_NO_BROADCAST_PUSH"));
 
 			PWLog.debug(TAG, "broadcastPush = " + broadcastPush);
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			PWLog.error(TAG, "Failed to read AndroidManifest");
 		}
 
-		try {
+		try
+		{
 			//make sure the receivers are on
 			registerReceivers();
 
@@ -249,7 +291,9 @@ public class PushNotifications extends CordovaPlugin {
 			NotificationFactory factory = new NotificationFactory();
 			factory.setPlugin(this);
 			mPushManager.setNotificationFactory(factory);
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			PWLog.error(TAG, "Missing pw_appid parameter. Did you follow the guide correctly?", e);
 			return false;
 		}
@@ -259,12 +303,16 @@ public class PushNotifications extends CordovaPlugin {
 	}
 
 	@CordovaMethod
-	private boolean registerDevice(JSONArray data, CallbackContext callbackContext) {
-		try {
+	private boolean registerDevice(JSONArray data, CallbackContext callbackContext)
+	{
+		try
+		{
 			callbackIds.put("registerDevice", callbackContext);
 			mPushManager.registerForPushNotifications();
-		} catch (java.lang.RuntimeException e) {
-			callbackIds.remove("registerDevice");
+		}
+		catch (java.lang.RuntimeException e)
+		{
+			callbackIds.remove("registerDevice");;
 			PWLog.error(TAG, "registering for push notifications failed", e);
 
 			callbackContext.error(e.getMessage());
@@ -275,12 +323,16 @@ public class PushNotifications extends CordovaPlugin {
 	}
 
 	@CordovaMethod
-	private boolean unregisterDevice(JSONArray data, CallbackContext callbackContext) {
+	private boolean unregisterDevice(JSONArray data, CallbackContext callbackContext)
+	{
 		callbackIds.put("unregisterDevice", callbackContext);
 
-		try {
+		try
+		{
 			mPushManager.unregisterForPushNotifications();
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			callbackIds.remove("unregisterDevice");
 			callbackContext.error(e.getMessage());
 		}
@@ -289,33 +341,28 @@ public class PushNotifications extends CordovaPlugin {
 	}
 
 	@CordovaMethod
-	private boolean setTags(JSONArray data, final CallbackContext callbackContext) {
+	private boolean setTags(JSONArray data, final CallbackContext callbackContext)
+	{
 		JSONObject params;
-		try {
+		try
+		{
 			params = data.getJSONObject(0);
-		} catch (JSONException e) {
+		}
+		catch (JSONException e)
+		{
 			PWLog.error(TAG, "No tags information passed (missing parameters)", e);
 			return false;
 		}
 
-		@SuppressWarnings("unchecked")
-		Iterator<String> nameItr = params.keys();
-		Map<String, Object> paramsMap = new HashMap<String, Object>();
-		while (nameItr.hasNext()) {
-			try {
-				String name = nameItr.next();
-				paramsMap.put(name, params.get(name));
-			} catch (JSONException e) {
-				PWLog.error(TAG, "Tag parameter is invalid", e);
-				return false;
-			}
-		}
+		Map<String, Object> tags = JsonUtils.jsonToMap(params);
 
 		callbackIds.put("setTags", callbackContext);
 
-		final class SendTagsListenerImpl implements SendPushTagsCallBack {
+		final class SendTagsListenerImpl implements SendPushTagsCallBack
+		{
 			@Override
-			public void onSentTagsSuccess(Map<String, String> skippedTags) {
+			public void onSentTagsSuccess(Map<String, String> skippedTags)
+			{
 				CallbackContext callback = callbackIds.get("setTags");
 				if (callback == null)
 					return;
@@ -325,7 +372,8 @@ public class PushNotifications extends CordovaPlugin {
 			}
 
 			@Override
-			public void onSentTagsError(Exception e) {
+			public void onSentTagsError(Exception e)
+			{
 				CallbackContext callback = callbackIds.get("setTags");
 				if (callback == null)
 					return;
@@ -335,21 +383,25 @@ public class PushNotifications extends CordovaPlugin {
 			}
 
 			@Override
-			public void taskStarted() {
+			public void taskStarted()
+			{
 			}
 		}
 
-		PushManager.sendTags(cordova.getActivity(), paramsMap, new SendTagsListenerImpl());
+		PushManager.sendTags(cordova.getActivity(), tags, new SendTagsListenerImpl());
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean getTags(JSONArray data, final CallbackContext callbackContext) {
+	private boolean getTags(JSONArray data, final CallbackContext callbackContext)
+	{
 		callbackIds.put("getTags", callbackContext);
 
-		final class GetTagsListenerImpl implements GetTagsListener {
+		final class GetTagsListenerImpl implements GetTagsListener
+		{
 			@Override
-			public void onTagsReceived(Map<String, Object> tags) {
+			public void onTagsReceived(Map<String, Object> tags)
+			{
 				CallbackContext callback = callbackIds.get("getTags");
 				if (callback == null)
 					return;
@@ -359,7 +411,8 @@ public class PushNotifications extends CordovaPlugin {
 			}
 
 			@Override
-			public void onError(Exception e) {
+			public void onError(Exception e)
+			{
 				CallbackContext callback = callbackIds.get("getTags");
 				if (callback == null)
 					return;
@@ -374,47 +427,57 @@ public class PushNotifications extends CordovaPlugin {
 	}
 
 	@CordovaMethod
-	private boolean getPushToken(JSONArray data, final CallbackContext callbackContext) {
+	private boolean getPushToken(JSONArray data, final CallbackContext callbackContext)
+	{
 		callbackContext.success(PushManager.getPushToken(cordova.getActivity()));
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean getPushwooshHWID(JSONArray data, final CallbackContext callbackContext) {
+	private boolean getPushwooshHWID(JSONArray data, final CallbackContext callbackContext)
+	{
 		callbackContext.success(PushManager.getPushwooshHWID(cordova.getActivity()));
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean startLocationTracking(JSONArray data, final CallbackContext callbackContext) {
+	private boolean startLocationTracking(JSONArray data, final CallbackContext callbackContext)
+	{
 		mPushManager.startTrackingGeoPushes();
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean stopLocationTracking(JSONArray data, final CallbackContext callbackContext) {
+	private boolean stopLocationTracking(JSONArray data, final CallbackContext callbackContext)
+	{
 		mPushManager.stopTrackingGeoPushes();
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean startBeaconPushes(JSONArray data, final CallbackContext callbackContext) {
+	private boolean startBeaconPushes(JSONArray data, final CallbackContext callbackContext)
+	{
 		mPushManager.startTrackingBeaconPushes();
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean stopBeaconPushes(JSONArray data, final CallbackContext callbackContext) {
+	private boolean stopBeaconPushes(JSONArray data, final CallbackContext callbackContext)
+	{
 		mPushManager.stopTrackingBeaconPushes();
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean setBeaconBackgroundMode(JSONArray data, final CallbackContext callbackContext) {
-		try {
+	private boolean setBeaconBackgroundMode(JSONArray data, final CallbackContext callbackContext)
+	{
+		try
+		{
 			boolean type = data.getBoolean(0);
 			PushManager.setBeaconBackgroundMode(cordova.getActivity(), type);
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			PWLog.error(TAG, "No parameters passed (missing parameters)", e);
 			return false;
 		}
@@ -423,16 +486,21 @@ public class PushNotifications extends CordovaPlugin {
 	}
 
 	@CordovaMethod
-	private boolean createLocalNotification(JSONArray data, final CallbackContext callbackContext) {
+	private boolean createLocalNotification(JSONArray data, final CallbackContext callbackContext)
+	{
 		JSONObject params = null;
-		try {
+		try
+		{
 			params = data.getJSONObject(0);
-		} catch (JSONException e) {
+		}
+		catch (JSONException e)
+		{
 			PWLog.error(TAG, "No parameters passed (missing parameters)", e);
 			return false;
 		}
 
-		try {
+		try
+		{
 			//config params: {msg:"message", seconds:30, userData:"optional"}
 			String message = params.getString("msg");
 			Integer seconds = params.getInt("seconds");
@@ -446,7 +514,9 @@ public class PushNotifications extends CordovaPlugin {
 				extras.putString("u", userData);
 
 			PushManager.scheduleLocalNotification(cordova.getActivity(), message, extras, seconds);
-		} catch (JSONException e) {
+		}
+		catch (JSONException e)
+		{
 			PWLog.error(TAG, "Not correct parameters passed (missing parameters)", e);
 			return false;
 		}
@@ -455,50 +525,62 @@ public class PushNotifications extends CordovaPlugin {
 	}
 
 	@CordovaMethod
-	private boolean clearLocalNotification(JSONArray data, final CallbackContext callbackContext) {
+	private boolean clearLocalNotification(JSONArray data, final CallbackContext callbackContext)
+	{
 		PushManager.clearLocalNotifications(cordova.getActivity());
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean getLaunchNotification(JSONArray data, final CallbackContext callbackContext) {
+	private boolean getLaunchNotification(JSONArray data, final CallbackContext callbackContext)
+	{
 		String launchNotification = mPushManager.getLaunchNotification();
 		// unfortunately null object can only be returned as String
-		if (launchNotification != null) {
+		if (launchNotification != null)
+		{
 			callbackContext.success(launchNotification);
-		} else {
+		}
+		else
+		{
 			callbackContext.success((String) null);
 		}
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean clearLaunchNotification(JSONArray data, final CallbackContext callbackContext) {
+	private boolean clearLaunchNotification(JSONArray data, final CallbackContext callbackContext)
+	{
 		mPushManager.clearLaunchNotification();
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean setMultiNotificationMode(JSONArray data, final CallbackContext callbackContext) {
+	private boolean setMultiNotificationMode(JSONArray data, final CallbackContext callbackContext)
+	{
 		PushManager.setMultiNotificationMode(cordova.getActivity());
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean setSingleNotificationMode(JSONArray data, final CallbackContext callbackContext) {
+	private boolean setSingleNotificationMode(JSONArray data, final CallbackContext callbackContext)
+	{
 		PushManager.setSimpleNotificationMode(cordova.getActivity());
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean setSoundType(JSONArray data, final CallbackContext callbackContext) {
-		try {
+	private boolean setSoundType(JSONArray data, final CallbackContext callbackContext)
+	{
+		try
+		{
 			Integer type = (Integer) data.get(0);
 			if (type == null)
 				return false;
 
 			PushManager.setSoundNotificationType(cordova.getActivity(), SoundType.fromInt(type));
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			PWLog.error(TAG, "No sound parameters passed (missing parameters)", e);
 			return false;
 		}
@@ -507,14 +589,18 @@ public class PushNotifications extends CordovaPlugin {
 	}
 
 	@CordovaMethod
-	private boolean setVibrateType(JSONArray data, final CallbackContext callbackContext) {
-		try {
+	private boolean setVibrateType(JSONArray data, final CallbackContext callbackContext)
+	{
+		try
+		{
 			Integer type = (Integer) data.get(0);
 			if (type == null)
 				return false;
 
 			PushManager.setVibrateNotificationType(cordova.getActivity(), VibrateType.fromInt(type));
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			PWLog.error(TAG, "No vibration parameters passed (missing parameters)", e);
 			return false;
 		}
@@ -523,11 +609,15 @@ public class PushNotifications extends CordovaPlugin {
 	}
 
 	@CordovaMethod
-	private boolean setLightScreenOnNotification(JSONArray data, final CallbackContext callbackContext) {
-		try {
+	private boolean setLightScreenOnNotification(JSONArray data, final CallbackContext callbackContext)
+	{
+		try
+		{
 			boolean type = (boolean) data.getBoolean(0);
 			PushManager.setLightScreenOnNotification(cordova.getActivity(), type);
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			PWLog.error(TAG, "No parameters passed (missing parameters)", e);
 			return false;
 		}
@@ -536,11 +626,15 @@ public class PushNotifications extends CordovaPlugin {
 	}
 
 	@CordovaMethod
-	private boolean setEnableLED(JSONArray data, final CallbackContext callbackContext) {
-		try {
+	private boolean setEnableLED(JSONArray data, final CallbackContext callbackContext)
+	{
+		try
+		{
 			boolean type = (boolean) data.getBoolean(0);
 			PushManager.setEnableLED(cordova.getActivity(), type);
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			PWLog.error(TAG, "No parameters passed (missing parameters)", e);
 			return false;
 		}
@@ -549,15 +643,19 @@ public class PushNotifications extends CordovaPlugin {
 	}
 
 	@CordovaMethod
-	private boolean setColorLED(JSONArray data, final CallbackContext callbackContext) {
-		try {
+	private boolean setColorLED(JSONArray data, final CallbackContext callbackContext)
+	{
+		try
+		{
 			String colorString = (String) data.get(0);
 			if (colorString == null)
 				return false;
 
 			int colorLed = GeneralUtils.parseColor(colorString);
 			PushManager.setColorLED(cordova.getActivity(), colorLed);
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			PWLog.error(TAG, "No parameters passed (missing parameters)", e);
 			return false;
 		}
@@ -566,33 +664,40 @@ public class PushNotifications extends CordovaPlugin {
 	}
 
 	@CordovaMethod
-	private boolean getPushHistory(JSONArray data, final CallbackContext callbackContext) {
+	private boolean getPushHistory(JSONArray data, final CallbackContext callbackContext)
+	{
 		ArrayList<String> pushHistory = mPushManager.getPushHistory();
 		callbackContext.success(new JSONArray(pushHistory));
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean clearPushHistory(JSONArray data, final CallbackContext callbackContext) {
+	private boolean clearPushHistory(JSONArray data, final CallbackContext callbackContext)
+	{
 		mPushManager.clearPushHistory();
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean clearNotificationCenter(JSONArray data, final CallbackContext callbackContext) {
+	private boolean clearNotificationCenter(JSONArray data, final CallbackContext callbackContext)
+	{
 		PushManager.clearNotificationCenter(cordova.getActivity());
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean setApplicationIconBadgeNumber(JSONArray data, final CallbackContext callbackContext) {
-		try {
+	private boolean setApplicationIconBadgeNumber(JSONArray data, final CallbackContext callbackContext)
+	{
+		try
+		{
 			Integer badgeNumber = data.getJSONObject(0).getInt("badge");
 			if (badgeNumber == null)
 				return false;
 
 			mPushManager.setBadgeNumber(badgeNumber);
-		} catch (JSONException e) {
+		}
+		catch (JSONException e)
+		{
 			PWLog.error(TAG, "No parameters passed (missing parameters)", e);
 			return false;
 		}
@@ -600,20 +705,25 @@ public class PushNotifications extends CordovaPlugin {
 	}
 
 	@CordovaMethod
-	private boolean getApplicationIconBadgeNumber(JSONArray data, final CallbackContext callbackContext) {
+	private boolean getApplicationIconBadgeNumber(JSONArray data, final CallbackContext callbackContext)
+	{
 		Integer badgeNumber = new Integer(mPushManager.getBadgeNumber());
 		callbackContext.success(badgeNumber);
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean addToApplicationIconBadgeNumber(JSONArray data, final CallbackContext callbackContext) {
-		try {
+	private boolean addToApplicationIconBadgeNumber(JSONArray data, final CallbackContext callbackContext)
+	{
+		try
+		{
 			Integer badgeNumber = data.getJSONObject(0).getInt("badge");
 			if (badgeNumber == null)
 				return false;
 			mPushManager.addBadgeNumber(badgeNumber);
-		} catch (JSONException e) {
+		}
+		catch (JSONException e)
+		{
 			PWLog.error(TAG, "No parameters passed (missing parameters)", e);
 			return false;
 		}
@@ -621,36 +731,48 @@ public class PushNotifications extends CordovaPlugin {
 	}
 
 	@CordovaMethod
-	private boolean setUserId(JSONArray data, final CallbackContext callbackContext) {
-		try {
+	private boolean setUserId(JSONArray data, final CallbackContext callbackContext)
+	{
+		try
+		{
 			String userId = data.getString(0);
 			mPushManager.setUserId(cordova.getActivity(), userId);
-		} catch (JSONException e) {
+		}
+		catch (JSONException e)
+		{
 			PWLog.error(TAG, "No parameters passed (missing parameters)", e);
 		}
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean postEvent(JSONArray data, final CallbackContext callbackContext) {
-		try {
+	private boolean postEvent(JSONArray data, final CallbackContext callbackContext)
+	{
+		try
+		{
 			String event = data.getString(0);
 			JSONObject attributes = data.getJSONObject(1);
 			InAppFacade.postEvent(cordova.getActivity(), event, JsonUtils.jsonToMap(attributes));
-		} catch (JSONException e) {
+		}
+		catch (JSONException e)
+		{
 			PWLog.error(TAG, "No parameters passed (missing parameters)", e);
 		}
 		return true;
 	}
 
 	@CordovaMethod
-	private boolean getRemoteNotificationStatus(JSONArray data, final CallbackContext callbackContext) {
-		try {
+	private boolean getRemoteNotificationStatus(JSONArray data, final CallbackContext callbackContext)
+	{
+		try
+		{
 			String enabled = PushManager.isNotificationEnabled(cordova.getActivity()) ? "1" : "0";
 			JSONObject result = new JSONObject();
 			result.put("enabled", enabled);
 			callbackContext.success(result);
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			callbackContext.error(e.getMessage());
 		}
 
@@ -658,41 +780,51 @@ public class PushNotifications extends CordovaPlugin {
 	}
 
 	@Override
-	public boolean execute(String action, JSONArray data, CallbackContext callbackId) {
+	public boolean execute(String action, JSONArray data, CallbackContext callbackId)
+	{
 		PWLog.debug(TAG, "Plugin Method Called: " + action);
 
 		Method method = exportedMethods.get(action);
-		if (method == null) {
+		if (method == null)
+		{
 			PWLog.debug(TAG, "Invalid action : " + action + " passed");
 			return false;
 		}
 
-		try {
+		try
+		{
 			Boolean result = (Boolean) method.invoke(this, data, callbackId);
 			return result;
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			PWLog.error(TAG, "Failed to execute action : " + action, e);
 			return false;
 		}
 	}
 
-	private void doOnRegistered(String registrationId) {
+	private void doOnRegistered(String registrationId)
+	{
 		CallbackContext callback = callbackIds.get("registerDevice");
 		if (callback == null)
 			return;
 
-		try {
+		try
+		{
 			JSONObject result = new JSONObject();
 			result.put("pushToken", registrationId);
 			callback.success(result);
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			callback.error("Internal error");
 		}
 
 		callbackIds.remove("registerDevice");
 	}
 
-	private void doOnRegisteredError(String errorId) {
+	private void doOnRegisteredError(String errorId)
+	{
 		CallbackContext callback = callbackIds.get("registerDevice");
 		if (callback == null)
 			return;
@@ -701,7 +833,8 @@ public class PushNotifications extends CordovaPlugin {
 		callbackIds.remove("registerDevice");
 	}
 
-	private void doOnUnregistered(String registrationId) {
+	private void doOnUnregistered(String registrationId)
+	{
 		CallbackContext callback = callbackIds.get("unregisterDevice");
 		if (callback == null)
 			return;
@@ -710,7 +843,8 @@ public class PushNotifications extends CordovaPlugin {
 		callbackIds.remove("unregisterDevice");
 	}
 
-	private void doOnUnregisteredError(String errorId) {
+	private void doOnUnregisteredError(String errorId)
+	{
 		CallbackContext callback = callbackIds.get("unregisterDevice");
 		if (callback == null)
 			return;
@@ -719,24 +853,28 @@ public class PushNotifications extends CordovaPlugin {
 		callbackIds.remove("unregisterDevice");
 	}
 
-	private void doOnPushOpened(String notification) {
+	private void doOnPushOpened(String notification)
+	{
 		PWLog.debug(TAG, "push opened: " + notification);
 
 		String jsStatement = String.format("cordova.require(\"pushwoosh-cordova-plugin.PushNotification\").notificationCallback(%s);", convertNotification(notification));
 		evalJs(jsStatement);
 	}
 
-	public void doOnPushReceived(String notification) {
+	public void doOnPushReceived(String notification)
+	{
 		PWLog.debug(TAG, "push received: " + notification);
 
 		String jsStatement = String.format("cordova.require(\"pushwoosh-cordova-plugin.PushNotification\").pushReceivedCallback(%s);", convertNotification(notification));
 		evalJs(jsStatement);
 	}
 
-	private String convertNotification(String notification) {
+	private String convertNotification(String notification)
+	{
 		JSONObject unifiedNotification = new JSONObject();
 
-		try {
+		try
+		{
 			JSONObject notificationJson = new JSONObject(notification);
 			String pushMessage = notificationJson.optString("title");
 			Boolean foreground = notificationJson.optBoolean("foreground");
@@ -749,48 +887,37 @@ public class PushNotifications extends CordovaPlugin {
 			unifiedNotification.put("foreground", foreground);
 			unifiedNotification.put("onStart", onStart);
 			unifiedNotification.put("userdata", userData);
-		} catch (JSONException e) {
+		}
+		catch (JSONException e) {
 			PWLog.error(TAG, "push message parsing failed", e);
 		}
 
 		String result = unifiedNotification.toString();
 
 		// wrap special characters
-		result.replace("%", "%\"+\"");
+		result = result.replace("%", "%\"+\"");
 
 		return result;
 	}
 
-	private void evalJs(String statement) {
+	private void evalJs(String statement)
+	{
 		final String url = "javascript:" + statement;
 
-		cordova.getActivity().runOnUiThread(new Runnable() {
+		cordova.getActivity().runOnUiThread(new Runnable()
+		{
 			@Override
-			public void run() {
-				webView.loadUrl(url);
+			public void run()
+			{
+				try
+				{
+					webView.loadUrl(url);
+				}
+				catch (Exception e)
+				{
+					PWLog.exception(e);
+				}
 			}
 		});
-	}
-
-	private String buidNotificationJsonToDeepLinks(String deeplink) {
-		JSONObject jsonObject = new JSONObject();
-		try {
-			jsonObject.put("google.sent_time", 0);
-			jsonObject.put("title", "");
-			jsonObject.put("vib", "");
-			jsonObject.put("pri", "");
-			jsonObject.put("collapse_key", "");
-			jsonObject.put("pw_msg", "");
-			jsonObject.put("p", "");
-			jsonObject.put("l", deeplink);
-			jsonObject.put("onStart", true);
-			jsonObject.put("foreground", false);
-			jsonObject.put("google.message_id", "");
-
-			return jsonObject.toString();
-		} catch (JSONException e) {
-			e.printStackTrace();
-		}
-		return null;
 	}
 }
