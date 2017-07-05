@@ -12,10 +12,14 @@
 
 #import "PushNotification.h"
 #import "PWLog.h"
-#import <CoreLocation/CoreLocation.h>
+
 #import "AppDelegate.h"
 
+#import <CoreLocation/CoreLocation.h>
+#import <UserNotifications/UserNotifications.h>
+
 #import <objc/runtime.h>
+
 
 #define WRITEJS(VAL) [NSString stringWithFormat:@"setTimeout(function() { %@; }, 0);", VAL]
 
@@ -100,6 +104,7 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
 		[PushNotificationManager initializeWithAppCode:appid appName:appname];
 	}
 
+	[UNUserNotificationCenter currentNotificationCenter].delegate = [PushNotificationManager pushManager].notificationCenterDelegate;
 	[self.pushManager sendAppOpen];
 
 	NSString * alertTypeString = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"Pushwoosh_ALERT_TYPE"];
@@ -264,17 +269,9 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
 		notification[@"message"] = message;
 	}
 	
-	//pase JSON string in custom data to JSON Object
-	NSString *userdata = pushNotification[@"u"];
-
+	NSDictionary *userdata = [[PushNotificationManager pushManager] getCustomPushDataAsNSDict:pushNotification];
 	if (userdata) {
-		id parsedData = [NSJSONSerialization JSONObjectWithData:[userdata dataUsingEncoding:NSUTF8StringEncoding]
-															 options:NSJSONReadingMutableContainers
-															   error:nil];
-
-		if (parsedData) {
-			notification[@"userdata"] = parsedData;
-		}
+		notification[@"userdata"] = userdata;
 	}
 	
 	notification[@"ios"] = pushNotification;
@@ -326,7 +323,7 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
 }
 
 - (void)cancelAllLocalNotifications:(CDVInvokedUrlCommand *)command {
-	[[UIApplication sharedApplication] cancelAllLocalNotifications];
+	[UIApplication sharedApplication].scheduledLocalNotifications = @[];
 
 	CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
 	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
