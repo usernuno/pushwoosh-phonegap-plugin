@@ -159,7 +159,7 @@
 		<source-file src="src/ios/Pushwoosh.framework/Versions/A/Pushwoosh" framework="true"/>
 
 		<hook type="after_plugin_install" src="src/ios/hooks/install_prerequisites.js"/>
-        <hook type="after_plugin_install" src="src/ios/hooks/install_entitlements.js"/>
+		<hook type="after_plugin_install" src="src/ios/hooks/install_entitlements.js"/>
 	</platform>
 
 	<!-- wp8 -->
