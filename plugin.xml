@@ -120,8 +120,8 @@
 		<source-file src="src/android/src/com/pushwoosh/plugin/pushnotifications/NotificationFactory.java"
 						target-dir="src/com/pushwoosh/plugin/pushnotifications" />
 
-		<framework src="com.google.android.gms:play-services-gcm:+" />
-		<framework src="com.google.android.gms:play-services-location:+" />
+		<framework src="com.google.android.gms:play-services-gcm:12.+" />
+		<framework src="com.google.android.gms:play-services-location:12.+" />
 		<framework src="com.android.support:support-v4:25.+" />
 		<framework src="com.pushwoosh:pushwoosh:4.12.2" />
 		<framework src="push.gradle" custom="true" type="gradleReference" />
@@ -159,7 +159,7 @@
 		<source-file src="src/ios/Pushwoosh.framework/Versions/A/Pushwoosh" framework="true"/>
 
 		<hook type="after_plugin_install" src="src/ios/hooks/install_prerequisites.js"/>
-        <hook type="after_plugin_install" src="src/ios/hooks/install_entitlements.js"/>
+		<hook type="after_plugin_install" src="src/ios/hooks/install_entitlements.js"/>
 	</platform>
 
 	<!-- wp8 -->
