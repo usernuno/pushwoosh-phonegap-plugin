@@ -11,18 +11,27 @@ Cross-Platform push notifications by Pushwoosh for Cordova / PhoneGap
 
 :warning: This plugin is SUPPORTED by OutSystems. Customers entitled to Support Services may obtain assistance through Support.
 
-### Installation
 
-Using npm (requires cordova 5.0+):
+#### Cordova
+
+Using npm (requires cordova 7.0+):
 
 ```
-cordova plugin add pushwoosh-cordova-plugin@6.5.3
+cordova plugin add pushwoosh-cordova-plugin@7.8.3
 ```
 
 Using git:
 
 ```
-cordova plugin add https://github.com/Pushwoosh/pushwoosh-phonegap-plugin.git#6.5.3
+cordova plugin add https://github.com/Pushwoosh/pushwoosh-phonegap-plugin.git#7.8.3
+```
+
+#### Phonegap
+
+Using npm (requires phonegap 7.1+):
+
+```
+cordova plugin add pushwoosh-pgb-plugin@7.1.1
 ```
 
 ### Guide

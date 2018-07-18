@@ -47,6 +47,16 @@ PushNotification.prototype.onDeviceReady = function(config) {
 	exec(null, null, "PushNotification", "onDeviceReady", config ? [config] : []);
 };
 
+//Function: onAppActivated
+//[windows] The event fires when Windows Runtime activation has occurred
+//
+//Parameters:
+// "args" - activation arguments
+//
+PushNotification.prototype.onAppActivated = function (args) {
+    exec(null, null, "PushNotification", "onAppActivated", args ? [args] : []);
+};
+
 //Function: registerDevice
 //[android, ios, wp8, windows] Register device for push notifications and retreive a push Token
 //
@@ -294,7 +304,7 @@ PushNotification.prototype.postEvent = function(event, attributes) {
 };
 
 //Function: createLocalNotification
-//[android] Schedules local notification,
+//[android, ios] Schedules local notification,
 //
 //Parameters:
 // "config.msg" - notification message
@@ -305,7 +315,7 @@ PushNotification.prototype.postEvent = function(event, attributes) {
 //
 //Example:
 //(start code)
-//	pushwoosh.createLocalNotification({msg:"Your pumpkins are ready!", seconds:30, userData:"optional"}
+//	pushwoosh.createLocalNotification({msg:"Your pumpkins are ready!", seconds:30, userData:"optional"});
 //(end)
 PushNotification.prototype.createLocalNotification = function(config, success, fail) {
 	exec(success, fail, "PushNotification", "createLocalNotification", config ? [config] : []);
@@ -451,6 +461,117 @@ PushNotification.prototype.notificationCallback = function(notification) {
 	ev.notification = notification;
 	ev.initEvent('push-notification', true, true, arguments);
 	document.dispatchEvent(ev);
+};
+
+// Opens Inbox screen.
+//
+// Supported style keys:
+//
+// Customizes the date formatting
+// "dateFormat"
+//
+// The default icon in the cell next to the message; if not specified, the app icon is used
+// "defaultImageIcon"
+//
+// The appearance of the unread messages mark (iOS only)
+// "unreadImage"
+//
+// The image which is displayed if an error occurs and the list of inbox messages is empty
+// "listErrorImage"
+//
+// The image which is displayed if the list of inbox messages is empty
+// "listEmptyImage"
+//
+// The error text which is displayed when an error occurs; cannot be localized
+// "listErrorMessage"
+//
+// The text which is displayed if the list of inbox messages is empty; cannot be localized
+// "listEmptyMessage"
+//
+// The default text color (iOS only)
+// "defaultTextColor"
+//
+// The accent color
+// "accentColor"
+//
+// The default background color
+// "backgroundColor"
+//
+// The default selection color
+// "highlightColor"
+//
+// The color of message titles
+// "titleColor"
+//
+// The color of message titles if message was readed (Android only)
+// "readTitleColor"
+//
+// The color of messages descriptions
+// "descriptionColor"
+//
+// The color of messages descriptions if message was readed (Android only)
+// "readDescriptionColor"
+//
+// The color of message dates
+// "dateColor"
+//
+// The color of message dates if message was readed (Android only)
+// "readDateColor"
+//
+// The color of the separator
+// "dividerColor"
+//
+//Example:
+// Pushwoosh.presentInboxUI({
+//   "dateFormat" : "dd.MMMM.yyyy",
+//   "defaultImageIcon" : 'img/icon.png',
+//   "listErrorImage" : 'img/error.png',
+//   "listEmptyImage" : 'img/empty.png',
+//   "listErrorMessage" : "Error message",
+//   "listEmptyMessage" : "Empty message",
+//   "accentColor" : '#ff00ff',
+//   "highlightColor" : '#ff00ff',
+//   "dateColor" : '#ff00ff',
+//   "titleColor" : '#ff00ff',
+//   "dividerColor" : '#ff00ff',
+//   "descriptionColor" : '#ff00ff',
+//   "backgroundColor" : '#ff00ff'
+// });
+PushNotification.prototype.presentInboxUI = function(params) {
+	exec(null, null, "PushNotification", "presentInboxUI", [ params ]);
+}
+
+// Show inApp for change setting Enable/disable all communication with Pushwoosh
+PushNotification.prototype.showGDPRConsentUI = function() {
+	exec(null, null, "PushNotification", "showGDPRConsentUI", []);
+}
+
+// Show inApp for all device data from Pushwoosh and stops all interactions and communication permanently.
+PushNotification.prototype.showGDPRDeletionUI = function() {
+	exec(null, null, "PushNotification", "showGDPRDeletionUI", []);
+}
+
+// Enable/disable all communication with Pushwoosh. Enabled by default.
+PushNotification.prototype.setCommunicationEnabled = function(enable, success, fail) {
+	exec(success, fail, "PushNotification", "setCommunicationEnabled", [enable]);
+};
+
+// Removes all device data from Pushwoosh and stops all interactions and communication permanently.
+PushNotification.prototype.removeAllDeviceData = function(success, fail) {
+	exec(success, fail, "PushNotification", "removeAllDeviceData", []);
+};
+
+PushNotification.prototype.isCommunicationEnabled = function(success) {
+	return exec(success, null, "PushNotification", "isCommunicationEnabled", []);
+};
+
+PushNotification.prototype.isDeviceDataRemoved = function(success) {
+	return exec(success, null, "PushNotification", "isDeviceDataRemoved", []);
+};
+
+// Indicates availability of the GDPR compliance solution.
+PushNotification.prototype.isAvailableGDPR = function(success) {
+	return exec(success, null, "PushNotification", "isAvailableGDPR", []);
 };
 
 module.exports = new PushNotification();

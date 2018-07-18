@@ -12,6 +12,8 @@
 
 #import "PushNotification.h"
 #import "PWLog.h"
+#import "PushwooshInboxUI.h"
+#import "PWGDPRManager.h"
 
 #import "AppDelegate.h"
 
@@ -111,35 +113,34 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
 	if([alertTypeString isKindOfClass:[NSString class]] && [alertTypeString isEqualToString:@"NONE"]) {
 		self.pushManager.showPushnotificationAlert = NO;
 	}
+    
+    _deviceReady = YES;
 	
-	AppDelegate *delegate = [[UIApplication sharedApplication] delegate];
-	PushNotification *pushHandler = [delegate.viewController getCommandInstance:@"PushNotification"];
-	if (pushHandler.startPushData && !_deviceReady) {
-		[self dispatchPush:pushHandler.startPushData];
+	if (self.pushManager.launchNotification) {
+        NSDictionary *notification = [self createNotificationDataForPush:self.pushManager.launchNotification onStart:YES];
+        [self dispatchPushReceive:notification];
+        [self dispatchPushAccept:notification];
 	}
-
-	_deviceReady = YES;
 
 	[[NSUserDefaults standardUserDefaults] synchronize];
 }
 
-- (void)dispatchPush:(NSDictionary *)pushData {
-	NSData *json = [NSJSONSerialization dataWithJSONObject:pushData options:NSJSONWritingPrettyPrinted error:nil];
-	NSString *jsonString = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+- (void)dispatchPushReceive:(NSDictionary *)pushData {
+    NSData *json = [NSJSONSerialization dataWithJSONObject:pushData options:NSJSONWritingPrettyPrinted error:nil];
+    NSString *jsonString = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+        
+    NSString *pushReceiveJsStatement = [NSString stringWithFormat: @"cordova.require(\"pushwoosh-cordova-plugin.PushNotification\").pushReceivedCallback(%@);", jsonString];
+        
+    [self.commandDelegate evalJs:WRITEJS(pushReceiveJsStatement)];
+}
 
-	NSString *pushOpenJsStatement = [NSString stringWithFormat: @"cordova.require(\"pushwoosh-cordova-plugin.PushNotification\").notificationCallback(%@);", jsonString];
-	NSString *pushReceiveJsStatement = [NSString stringWithFormat: @"cordova.require(\"pushwoosh-cordova-plugin.PushNotification\").pushReceivedCallback(%@);", jsonString];
-
-	if ([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground) {
-		[self.commandDelegate evalJs:WRITEJS(pushReceiveJsStatement)];
-	}
-	else if ([[UIApplication sharedApplication] applicationState] == UIApplicationStateActive) {
-		[self.commandDelegate evalJs:WRITEJS(pushReceiveJsStatement)];
-		[self.commandDelegate evalJs:WRITEJS(pushOpenJsStatement)];
-	}
-	else {
-		[self.commandDelegate evalJs:WRITEJS(pushOpenJsStatement)];
-	}
+- (void)dispatchPushAccept:(NSDictionary *)pushData {
+    NSData *json = [NSJSONSerialization dataWithJSONObject:pushData options:NSJSONWritingPrettyPrinted error:nil];
+    NSString *jsonString = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+    
+    NSString *pushOpenJsStatement = [NSString stringWithFormat: @"cordova.require(\"pushwoosh-cordova-plugin.PushNotification\").notificationCallback(%@);", jsonString];
+    
+    [self.commandDelegate evalJs:WRITEJS(pushOpenJsStatement)];
 }
 
 - (void)registerDevice:(CDVInvokedUrlCommand *)command {
@@ -156,10 +157,21 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
 }
 
 - (void)unregisterDevice:(CDVInvokedUrlCommand *)command {
-	[[PushNotificationManager pushManager] unregisterForPushNotifications];
-
-	CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:nil];
-	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    self.callbackIds[@"unregisterDevice"] = command.callbackId;
+    
+    [[PushNotificationManager pushManager] unregisterForPushNotificationsWithCompletion:^(NSError *error) {
+        if (!error) {
+            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:nil];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackIds[@"unregisterDevice"]];
+        } else {
+            NSMutableDictionary *results = [NSMutableDictionary dictionary];
+            results[@"error"] = [NSString stringWithFormat:@"%@", error];
+            
+            CDVPluginResult *pluginResult =
+            [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:results];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackIds[@"unregisterDevice"]];
+        }
+    }];
 }
 
 - (void)startBeaconPushes:(CDVInvokedUrlCommand *)command {
@@ -225,6 +237,46 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
 	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
+- (void)createLocalNotification:(CDVInvokedUrlCommand *)command {
+    NSDictionary *params = command.arguments[0];
+    NSString *body = params[@"msg"];
+    NSUInteger delay = [params[@"seconds"] unsignedIntegerValue];
+    NSDictionary *userData = params[@"userData"];
+    
+    [self sendLocalNotificationWithBody:body delay:delay userData:userData];
+    
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:nil];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)sendLocalNotificationWithBody:(NSString *)body delay:(NSUInteger)delay userData:(NSDictionary *)userData {
+    if (@available(iOS 10, *)) {
+        UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+        UNMutableNotificationContent *content = [UNMutableNotificationContent new];
+        content.body = body;
+        content.sound = [UNNotificationSound defaultSound];
+        content.userInfo = userData;
+        UNTimeIntervalNotificationTrigger *trigger = [UNTimeIntervalNotificationTrigger triggerWithTimeInterval:delay repeats:NO];
+        NSString *identifier = @"LocalNotification";
+        UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:identifier
+                                                                              content:content
+                                                                              trigger:trigger];
+        
+        [center addNotificationRequest:request withCompletionHandler:^(NSError *_Nullable error) {
+            if (error != nil) {
+                NSLog(@"Something went wrong: %@", error);
+            }
+        }];
+    } else {
+        UILocalNotification *localNotification = [[UILocalNotification alloc] init];
+        localNotification.fireDate = [NSDate dateWithTimeIntervalSinceNow:delay];
+        localNotification.alertBody = body;
+        localNotification.timeZone = [NSTimeZone defaultTimeZone];
+        localNotification.userInfo = userData;
+        [[UIApplication sharedApplication] scheduleLocalNotification:localNotification];
+    }
+}
+
 - (void)onDidRegisterForRemoteNotificationsWithDeviceToken:(NSString *)token {
 	if (self.callbackIds[@"registerDevice"]) {
 		NSMutableDictionary *results = [PushNotificationManager getRemoteNotificationStatus];
@@ -243,53 +295,63 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
 	}
 }
 
-- (void)onPushAccepted:(PushNotificationManager *)manager
-	  withNotification:(NSDictionary *)pushNotification
-			   onStart:(BOOL)onStart {
-	
-	if (!onStart && !_deviceReady) {
-		PWLogWarn(@"PUSHWOOSH WARNING: push notification onStart is false, but onDeviceReady has not been called. Did you "
-			  @"forget to call onDeviceReady?");
-	}
+- (NSDictionary *)createNotificationDataForPush:(NSDictionary *)pushNotification onStart:(BOOL)onStart {
+    if (!onStart && !_deviceReady) {
+        PWLogWarn(@"PUSHWOOSH WARNING: onStart is false, but onDeviceReady has not been called. Did you "
+                  @"forget to call onDeviceReady?");
+    }
+    
+    NSMutableDictionary *notification = [NSMutableDictionary new];
+    
+    notification[@"onStart"] = @(onStart);
+    
+    BOOL isForegound = [UIApplication sharedApplication].applicationState == UIApplicationStateActive;
+    notification[@"foreground"] = @(isForegound);
+    
+    id alert = pushNotification[@"aps"][@"alert"];
+    NSString *message = alert;
+    if ([alert isKindOfClass:[NSDictionary class]]) {
+        message = alert[@"body"];
+    }
+    
+    if (message) {
+        notification[@"message"] = message;
+    }
+    
+    NSDictionary *userdata = [[PushNotificationManager pushManager] getCustomPushDataAsNSDict:pushNotification];
+    if (userdata) {
+        notification[@"userdata"] = userdata;
+    }
+    
+    notification[@"ios"] = pushNotification;
+    
+    PWLogDebug(@"Notification opened: %@", notification);
+    
+    if (onStart) {
+        //keep the start push
+        AppDelegate *delegate = [[UIApplication sharedApplication] delegate];
+        PushNotification *pushHandler = [delegate.viewController getCommandInstance:@"PushNotification"];
+        pushHandler.startPushData = notification;
+        pushHandler.startPushCleared = NO;
+    }
+    
+    return notification;
+}
 
-	NSMutableDictionary *notification = [NSMutableDictionary new];
-	
-	notification[@"onStart"] = @(onStart);
-	
-	BOOL isForegound = [UIApplication sharedApplication].applicationState == UIApplicationStateActive;
-	notification[@"foreground"] = @(isForegound);
-	
-	id alert = pushNotification[@"aps"][@"alert"];
-	NSString *message = alert;
-	if ([alert isKindOfClass:[NSDictionary class]]) {
-		message = alert[@"body"];
-	}
+- (void)onPushReceived:(PushNotificationManager *)pushManager withNotification:(NSDictionary *)pushNotification onStart:(BOOL)onStart {
+    if (_deviceReady) {
+        NSDictionary *notification = [self createNotificationDataForPush:pushNotification onStart:onStart];
+        //send it to the webview
+        [self dispatchPushReceive:notification];
+    }
+}
 
-	if (message) {
-		notification[@"message"] = message;
-	}
-	
-	NSDictionary *userdata = [[PushNotificationManager pushManager] getCustomPushDataAsNSDict:pushNotification];
-	if (userdata) {
-		notification[@"userdata"] = userdata;
-	}
-	
-	notification[@"ios"] = pushNotification;
-
-	PWLogDebug(@"Notification opened: %@", notification);
-
-	if (onStart) {
-		//keep the start push
-		AppDelegate *delegate = [[UIApplication sharedApplication] delegate];
-		PushNotification *pushHandler = [delegate.viewController getCommandInstance:@"PushNotification"];
-		pushHandler.startPushData = notification;
-		pushHandler.startPushCleared = NO;
-	}
-
-	if (_deviceReady) {
-		//send it to the webview
-		[self dispatchPush:notification];
-	}
+- (void)onPushAccepted:(PushNotificationManager *)manager withNotification:(NSDictionary *)pushNotification onStart:(BOOL)onStart {
+    if (_deviceReady) {
+        NSDictionary *notification = [self createNotificationDataForPush:pushNotification onStart:onStart];
+        //send it to the webview
+        [self dispatchPushAccept:notification];
+    }
 }
 
 - (void)getRemoteNotificationStatus:(CDVInvokedUrlCommand *)command {
@@ -352,6 +414,147 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
 	NSString *event = command.arguments[0];
 	NSDictionary *attributes = command.arguments[1];
 	[self.pushManager postEvent:event withAttributes:attributes];
+}
+
+- (void)showGDPRConsentUI:(CDVInvokedUrlCommand *)command {
+    [[PWGDPRManager sharedManager] showGDPRConsentUI];
+    
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)showGDPRDeletionUI:(CDVInvokedUrlCommand *)command {
+    [[PWGDPRManager sharedManager] showGDPRDeletionUI];
+    
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)setCommunicationEnabled:(CDVInvokedUrlCommand *)command {
+    self.callbackIds[@"setCommunicationEnabled"] = command.callbackId;
+    
+    NSNumber *enabledObject = [command.arguments firstObject];
+    
+    BOOL enabled = [enabledObject boolValue];
+    
+    [[PWGDPRManager sharedManager] setCommunicationEnabled:enabled completion:^(NSError *error) {
+        if (!error) {
+            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackIds[@"setCommunicationEnabled"]];
+        } else {
+            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error.localizedDescription];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackIds[@"setCommunicationEnabled"]];
+        }
+    }];
+}
+
+- (void)removeAllDeviceData:(CDVInvokedUrlCommand *)command {
+    self.callbackIds[@"removeAllDeviceData"] = command.callbackId;
+    
+    [[PWGDPRManager sharedManager] removeAllDeviceDataWithCompletion:^(NSError *error) {
+        if (!error) {
+            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackIds[@"removeAllDeviceData"]];
+        } else {
+            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error.localizedDescription];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackIds[@"removeAllDeviceData"]];
+        }
+    }];
+}
+
+- (void)isCommunicationEnabled:(CDVInvokedUrlCommand *)command {
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:[[PWGDPRManager sharedManager] isCommunicationEnabled]];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)isDeviceDataRemoved:(CDVInvokedUrlCommand *)command {
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:[[PWGDPRManager sharedManager] isDeviceDataRemoved]];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)isAvailableGDPR:(CDVInvokedUrlCommand *)command {
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:[[PWGDPRManager sharedManager] isAvailable]];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (UIImage *)imageFromInboxStyleDict:(NSDictionary *)dict forKey:(NSString *)key {
+    NSObject *object = dict[key];
+    if (object != nil && [object isKindOfClass:[NSString class]]) {
+        return [UIImage imageWithContentsOfFile:[((CDVViewController *)self.viewController).commandDelegate pathForResource:(NSString *)object]];
+    }
+    return nil;
+}
+
+- (UIColor *)colorFromInboxStyleDict:(NSDictionary *)dict forKey:(NSString *)key {
+    NSObject *object = dict[key];
+    if (object != nil && [object isKindOfClass:[NSString class]]) {
+        return [((CDVViewController *)self.viewController) colorFromColorString:(NSString *)object];
+    }
+    return nil;
+}
+
+- (NSString *)stringFromInboxStyleDict:(NSDictionary *)dict forKey:(NSString *)key {
+    NSObject *object = dict[key];
+    if (object != nil && [object isKindOfClass:[NSString class]]) {
+        return (NSString *)object;
+    }
+    return nil;
+}
+
+- (NSString *(^)(NSDate *date, NSObject *owner))dateFormatterBlockFromInboxStyleDict:(NSDictionary *)dict forKey:(NSString *)key {
+    NSObject *object = dict[key];
+    if (object != nil && [object isKindOfClass:[NSString class]]) {
+        NSDateFormatter *formatter = [NSDateFormatter new];
+        formatter.dateFormat = (NSString*)object;
+        return ^NSString *(NSDate *date, NSObject *owner) {
+            return [formatter stringFromDate:date];
+        };
+    }
+    return nil;
+}
+
+- (PWIInboxStyle *)inboxStyleForDictionary:(NSDictionary *)styleDictionary {
+    PWIInboxStyle *style = [PWIInboxStyle defaultStyle];
+    
+    if (![self.viewController isKindOfClass:[CDVViewController class]]) {
+        return style;
+    }
+    
+#define styleValue(prop, key, type) { id val = [self type##FromInboxStyleDict:styleDictionary forKey:key]; if (val != nil) prop = val; }
+    
+    styleValue(style.defaultImageIcon, @"defaultImageIcon", image);
+    styleValue(style.dateFormatterBlock, @"dateFormat", dateFormatterBlock);
+    styleValue(style.listErrorMessage, @"listErrorMessage", string);
+    styleValue(style.listEmptyMessage, @"listEmptyMessage", string);
+    styleValue(style.accentColor, @"accentColor", color);
+    styleValue(style.defaultTextColor, @"defaultTextColor", color);
+    styleValue(style.backgroundColor, @"backgroundColor", color);
+    styleValue(style.selectionColor, @"highlightColor", color);
+    styleValue(style.titleColor, @"titleColor", color);
+    styleValue(style.descriptionColor, @"descriptionColor", color);
+    styleValue(style.dateColor, @"dateColor", color);
+    styleValue(style.separatorColor, @"dividerColor", color);
+    
+    styleValue(style.listErrorImage, @"listErrorImage", image);
+    styleValue(style.listEmptyImage, @"listEmptyImage", image);
+    styleValue(style.unreadImage, @"unreadImage", image);
+    
+#undef styleValue
+    
+    return style;
+}
+
+- (void)presentInboxUI:(CDVInvokedUrlCommand *)command {
+    NSDictionary *styleDictionary = [command.arguments firstObject];
+    UIViewController *inboxViewController = [PWIInboxUI createInboxControllerWithStyle:[self inboxStyleForDictionary:styleDictionary]];
+    inboxViewController.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Close", @"Close") style:UIBarButtonItemStylePlain target:self action:@selector(closeInbox)];
+    [self.viewController presentViewController:[[UINavigationController alloc] initWithRootViewController:inboxViewController] animated:YES completion:nil];
+}
+
+- (void)closeInbox {
+    if ([self.viewController.presentedViewController isKindOfClass:[UINavigationController class]] && [((UINavigationController*)self.viewController.presentedViewController).viewControllers.firstObject isKindOfClass:[PWIInboxViewController class]]) {
+        [self.viewController dismissViewControllerAnimated:YES completion:nil];
+    }
 }
 
 BOOL pwplugin_didRegisterUserNotificationSettings(id self, SEL _cmd, id application, id notificationSettings) {
