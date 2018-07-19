@@ -20,6 +20,8 @@
 #import <CoreLocation/CoreLocation.h>
 #import <UserNotifications/UserNotifications.h>
 
+#import <Cordova/CDVViewController.h>
+
 #import <objc/runtime.h>
 
 
