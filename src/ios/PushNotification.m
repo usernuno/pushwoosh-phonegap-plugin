@@ -118,6 +118,9 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
     
     _deviceReady = YES;
 	
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+
 	if (self.pushManager.launchNotification) {
         NSDictionary *notification = [self createNotificationDataForPush:self.pushManager.launchNotification onStart:YES];
         [self dispatchPushReceive:notification];
