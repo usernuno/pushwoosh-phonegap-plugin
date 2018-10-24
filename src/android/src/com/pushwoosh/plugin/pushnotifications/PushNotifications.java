@@ -165,6 +165,8 @@ public class PushNotifications extends CordovaPlugin {
 			PWLog.error(TAG, "Missing pw_appid parameter. Did you follow the guide correctly?", e);
 			return false;
 		}
+		
+		callbackContext.success();
 		return true;
 	}
 
