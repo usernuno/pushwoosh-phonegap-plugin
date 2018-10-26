@@ -121,7 +121,11 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
     CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
 	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 
-	if (self.pushManager.launchNotification) {
+	// RNMT-2095 - launchNotification is not being cleared after dispatch
+    // The launchNotification is only defined when the app is launched by a notification. 
+    // The startPushData is a private field with the data of launchNotification and it's created for the dispatch.
+    // This means that if the startPushData is null, the launchNotification hasn't been dispatched.
+    if (self.pushManager.launchNotification && !self.startPushData) {
         NSDictionary *notification = [self createNotificationDataForPush:self.pushManager.launchNotification onStart:YES];
         [self dispatchPushReceive:notification];
         [self dispatchPushAccept:notification];
