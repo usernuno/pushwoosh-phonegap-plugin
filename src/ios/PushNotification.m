@@ -14,6 +14,9 @@
 #import "PWLog.h"
 #import "PushwooshInboxUI.h"
 #import "PWGDPRManager.h"
+#import "PWInAppManager.h"
+#import "PWBackward.h"
+#import "PWGeozonesManager.h"
 
 #import "AppDelegate.h"
 
@@ -24,6 +27,24 @@
 
 
 #define WRITEJS(VAL) [NSString stringWithFormat:@"setTimeout(function() { %@; }, 0);", VAL]
+
+
+@interface PWCommonJSBridge: NSObject <PWJavaScriptInterface>
+
+@property (nonatomic) CDVPlugin *plugin;
+
+@end
+
+
+@implementation PWCommonJSBridge
+
+- (void)callFunction:(NSString *)functionName :(NSString *)parameters {
+    NSString *function = parameters != nil ? [NSString stringWithFormat:@"%@(%@)", functionName, parameters] : [NSString stringWithFormat:@"%@()", functionName];
+    [_plugin.webViewEngine evaluateJavaScript:function completionHandler:nil];
+}
+
+@end
+
 
 @interface PushNotification()
 
@@ -105,7 +126,7 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
 	else {
 		[PushNotificationManager initializeWithAppCode:appid appName:appname];
 	}
-
+    
 	[UNUserNotificationCenter currentNotificationCenter].delegate = [PushNotificationManager pushManager].notificationCenterDelegate;
 	[self.pushManager sendAppOpen];
 
@@ -217,21 +238,21 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
 	NSNumber *lat = command.arguments[0][@"lat"];
 	NSNumber *lon = command.arguments[0][@"lon"];
 	CLLocation *location = [[CLLocation alloc] initWithLatitude:[lat doubleValue] longitude:[lon doubleValue]];
-	[[PushNotificationManager pushManager] sendLocation:location];
+	[[PWGeozonesManager sharedManager] sendLocation:location];
 
 	CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:nil];
 	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
 - (void)startLocationTracking:(CDVInvokedUrlCommand *)command {
-	[[PushNotificationManager pushManager] startLocationTracking];
+	[[PWGeozonesManager sharedManager] startLocationTracking];
 
 	CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:nil];
 	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
 - (void)stopLocationTracking:(CDVInvokedUrlCommand *)command {
-	[[PushNotificationManager pushManager] stopLocationTracking];
+	[[PWGeozonesManager sharedManager] stopLocationTracking];
 
 	CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:nil];
 	[self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
@@ -416,6 +437,13 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
 	[self.pushManager postEvent:event withAttributes:attributes];
 }
 
+- (void)addJavaScriptInterface:(CDVInvokedUrlCommand *)command {
+    NSString *name = command.arguments[0];
+    PWCommonJSBridge *bridge = [PWCommonJSBridge new];
+    bridge.plugin = self;
+    [[PWInAppManager sharedManager] addJavascriptInterface:bridge withName:name];
+}
+
 - (void)showGDPRConsentUI:(CDVInvokedUrlCommand *)command {
     [[PWGDPRManager sharedManager] showGDPRConsentUI];
     
@@ -488,7 +516,7 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
 - (UIColor *)colorFromInboxStyleDict:(NSDictionary *)dict forKey:(NSString *)key {
     NSObject *object = dict[key];
     if (object != nil && [object isKindOfClass:[NSString class]]) {
-        return [((CDVViewController *)self.viewController) colorFromColorString:(NSString *)object];
+        return [PWBackward colorFromColorString:(NSString *)object cordovaViewController:((CDVViewController *)self.viewController)];
     }
     return nil;
 }
@@ -539,6 +567,10 @@ void pushwoosh_swizzle(Class class, SEL fromChange, SEL toChange, IMP impl, cons
     styleValue(style.listEmptyImage, @"listEmptyImage", image);
     styleValue(style.unreadImage, @"unreadImage", image);
     
+    styleValue(style.barTextColor, @"barTextColor", color);
+    styleValue(style.barAccentColor, @"barAccentColor", color);
+    styleValue(style.barBackgroundColor, @"barBackgroundColor", color);
+    styleValue(style.barTitle, @"barTitle", string);
 #undef styleValue
     
     return style;
