@@ -58,7 +58,7 @@ class InboxUiStyleManager {
         private InboxDateFormatter optDateFormatter(String key, InboxDateFormatter defaultValue) {
             String dateFormat = style.optString(key);
             if (dateFormat != null && !dateFormat.isEmpty()) {
-                final SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat, Locale.getDefault());;
+                final SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat, Locale.getDefault());
                 return new InboxDateFormatter() {
                     @Override
                     public String transform(Date date) {
@@ -100,6 +100,11 @@ class InboxUiStyleManager {
 
         public void parse() {
             PushwooshInboxStyle style = PushwooshInboxStyle.INSTANCE;
+
+            style.setBarBackgroundColor(optColor("barBackgroundColor", style.getBarBackgroundColor()));
+            style.setBarAccentColor(optColor("barAccentColor", style.getBarAccentColor()));
+            style.setBarTextColor(optColor("barTextColor", style.getBarTextColor()));
+            style.setBarTitle(this.style.optString("barTitle", style.getBarTitle()));
 
             style.setDateFormatter(optDateFormatter("dateFormat", style.getDateFormatter()));
 
