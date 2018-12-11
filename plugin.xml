@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android" id="pushwoosh-cordova-plugin" version="7.11.0">
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android" id="pushwoosh-cordova-plugin" version="7.11.0-OS3">
 
 	<name>Pushwoosh</name>
 
@@ -87,7 +87,7 @@
             
 			<receiver android:name="com.pushwoosh.location.geofencer.GeofenceReceiver">
 				<intent-filter>
-					<action android:name="$PACKAGE_NAME.action.GEOFENCE" />
+					<action android:name="${applicationId}.action.GEOFENCE" />
 				</intent-filter>
 			</receiver>
 		</config-file>
