@@ -57,6 +57,16 @@ PushNotification.prototype.onAppActivated = function (args) {
     exec(null, null, "PushNotification", "onAppActivated", args ? [args] : []);
 };
 
+//Function: onAppActivated
+//[windows] The event fires when Windows Runtime activation has occurred
+//
+//Parameters:
+// "args" - activation arguments
+//
+PushNotification.prototype.onAppActivated = function (args) {
+    exec(null, null, "PushNotification", "onAppActivated", args ? [args] : []);
+};
+
 //Function: registerDevice
 //[android, ios, wp8, windows] Register device for push notifications and retreive a push Token
 //
@@ -301,6 +311,28 @@ PushNotification.prototype.setUserId = function(userId) {
 //(end)
 PushNotification.prototype.postEvent = function(event, attributes) {
 	exec(null, null, "PushNotification", "postEvent", [event, attributes]);
+};
+
+//Function: addJavaScriptInterface
+//Adds javascript interface for In-App Messages.
+//Interface will be accessible from Rich Media as object with specified `name` and function 'callFunction('<function_name>', JSON.stringify(<params>))'.
+//
+//Parameters:
+// "name" - interface name
+//
+//Example:
+//Cordova part:
+//  function foo() {
+//      alert("Bridge is working!");
+//  }
+//
+//
+//  pushwoosh.addJavaScriptInterface('testBridge');
+//
+//Rich Media part:
+//  testBridge.callFunction('foo', JSON.stringify({'param1':1,'param2':'test'}))
+PushNotification.prototype.addJavaScriptInterface = function(name) {
+    exec(null, null, "PushNotification", "addJavaScriptInterface", [name]);
 };
 
 //Function: createLocalNotification
