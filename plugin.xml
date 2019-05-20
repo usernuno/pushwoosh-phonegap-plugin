@@ -26,6 +26,9 @@
 
 	<!-- android -->
 	<platform name="android">
+		<hook type="before_plugin_install" src="hooks/outsystems/handle_google_services.js" />
+		<hook type="after_plugin_install" src="hooks/outsystems/google_services_cleanup.js" />
+
 		<dependency id="cordova-support-google-services" version="1.2.1" />
 	
 		<config-file>
