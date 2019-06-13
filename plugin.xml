@@ -28,8 +28,6 @@
 	<platform name="android">
 		<hook type="before_plugin_install" src="hooks/outsystems/handle_google_services.js" />
 		<hook type="after_plugin_install" src="hooks/outsystems/google_services_cleanup.js" />
-
-		<dependency id="cordova-support-google-services" version="1.3.1" />
 	
 		<config-file>
 			<access origin="*.pushwoosh.com" />
@@ -77,6 +75,8 @@
 		<framework src="com.pushwoosh:pushwoosh-badge:5.13.0"/>
         <framework src="com.pushwoosh:pushwoosh-inbox:5.13.0"/>
         <framework src="com.pushwoosh:pushwoosh-inbox-ui:5.13.0"/>
+
+		<framework src="libs/android/googleservices-build.gradle" custom="true" type="gradleReference" />
 	</platform>
 
 	<!-- ios -->
